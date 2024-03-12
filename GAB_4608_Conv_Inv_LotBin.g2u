@@ -1,0 +1,203 @@
+Program.Sub.ScreenSU.Start
+Gui.frmLotBin..Create
+Gui.frmLotBin..Size(6690,10050)
+Gui.frmLotBin..MinX(0)
+Gui.frmLotBin..MinY(0)
+Gui.frmLotBin..Position(0,0)
+Gui.frmLotBin..BackColor(-2147483633)
+Gui.frmLotBin..MousePointer(0)
+Gui.frmLotBin..Caption("Inventory Master to Lot/Bin Conversion")
+Gui.frmLotBin..Event(UnLoad,frmLotBin_UnLoad)
+Gui.frmLotBin..MaxButton(False)
+Gui.frmLotBin..Sizeable(False)
+Gui.frmLotBin.cmdUpdate.Create(Button)
+Gui.frmLotBin.cmdUpdate.Size(855,375)
+Gui.frmLotBin.cmdUpdate.Position(5670,9330)
+Gui.frmLotBin.cmdUpdate.Caption("Update")
+Gui.frmLotBin.cmdUpdate.Event(Click,cmdUpdate_Click)
+Gui.frmLotBin.GsGCLotBin.Create(GsGridControl)
+Gui.frmLotBin.GsGCLotBin.Size(6480,7950)
+Gui.frmLotBin.GsGCLotBin.Position(45,1350)
+Gui.frmLotBin.pbStatus.Create(ProgressBar)
+Gui.frmLotBin.pbStatus.Size(2025,255)
+Gui.frmLotBin.pbStatus.Position(45,300)
+Gui.frmLotBin.pbStatus.Visible(False)
+Gui.frmLotBin.lblStatus.Create(Label,"Running Conversion....",False,2055,255,0,45,90,True,0,"Arial",8,-2147483633,0)
+Gui.frmLotBin.ddlBin.Create(DropDownList)
+Gui.frmLotBin.ddlBin.Size(1095,330)
+Gui.frmLotBin.ddlBin.Position(45,915)
+Gui.frmLotBin.ddlBin.Event(Click,ddlBin_Click)
+Gui.frmLotBin.lblBin.Create(Label,"Upload Bin",True,1140,255,0,45,705,True,0,"Arial",8,-2147483633,0)
+Gui.frmLotBin.picGSSLogo.Create(PictureBox)
+Gui.frmLotBin.picGSSLogo.Size(4125,960)
+Gui.frmLotBin.picGSSLogo.Position(2400,45)
+Gui.frmLotBin.chkBlank.Create(CheckBox)
+Gui.frmLotBin.chkBlank.Size(1050,360)
+Gui.frmLotBin.chkBlank.Position(1200,885)
+Gui.frmLotBin.chkBlank.Caption("Blank Bin")
+Gui.frmLotBin.chkBlank.Event(Click,chkBlank_Click)
+Program.Sub.ScreenSU.End
+
+Program.Sub.Preflight.Start
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+	V.Local.sIcon.Declare
+	V.Local.sGssLogo.Declare
+
+	F.Intrinsic.String.Build("{0}\GAB\GAS\gss2.ico",V.Caller.PluginsDir,v.Local.sIcon)
+	F.Intrinsic.String.Build("{0}\GAB\GAS\GAB_GSS_Logo_Green_Dash.png",V.Caller.PluginsDir,V.Local.sGssLogo)
+	Gui.frmLotBin..Icon(V.Local.sIcon)
+	Gui.frmLotBin.picGSSLogo.Picture(V.Local.sGssLogo)
+	
+	F.Intrinsic.Control.CallSub(Load_Bins)
+	F.Intrinsic.Control.CallSub(Load_Inventory_Mstr)
+	
+	Gui.frmLotBin..Show
+Program.Sub.Main.End
+
+Program.Sub.frmLotBin_UnLoad.Start
+	F.Intrinsic.Control.End
+Program.Sub.frmLotBin_UnLoad.End
+
+Program.Sub.Load_Bins.Start
+	F.ODBC.Connection!con.OpenCompanyConnection(500)
+	F.Data.Dictionary.CreateFromSQL("dBins","con","Select Bin,Bin From Bin_Master Order By Bin;")
+	Gui.frmLotBin.ddlBin.AddItems("Dictionary","dBins")
+	F.ODBC.Connection!con.Close
+Program.Sub.Load_Bins.End
+
+Program.Sub.Load_Inventory_Mstr.Start
+	V.Local.sValues.Declare
+	
+	F.ODBC.Connection!con.OpenCompanyConnection(500)
+	
+	F.Intrinsic.Control.If(V.DataTable.dtInvMstr.Exists)
+		F.Data.DataTable.Close("dtInvMstr")
+	F.Intrinsic.Control.EndIf
+	
+	F.Data.DataTable.CreateFromSQL("dtInvMstr","con","Select A.Part,A.Location,A.Qty_OnHand,B.Cost,B.Matl,B.Labor,B.Ovhd,B.Outs,B.Freight,B.Oth From Inventory_Mstr A Join Inventory_Cost B On A.Part = B.Part And A.Location = B.Locn Where A.Flag_Lot <> 'Y' And A.Qty_OnHand >= 0 Order By A.Part,A.Location;",True)
+	F.Data.DataTable.AddColumn("dtInvMstr","Bin",String)
+	
+	Gui.frmLotBin.GsGCLotBin.AddGridviewFromDatatable("gvInvMstr","dtInvMstr")
+	Gui.frmLotBin.GsGCLotBin.MainView("gvInvMstr")
+	Gui.frmLotBin.GsGCLotBin.SuspendLayout()
+	Gui.frmLotBin.GsGCLotBin.SetGridViewProperty("gvInvMstr","MultiSelect",True)
+	Gui.frmLotBin.GsGCLotBin.SetGridViewProperty("gvInvMstr","AllowSort",True)
+	Gui.frmLotBin.GsGCLotBin.SetGridViewProperty("gvInvMstr","AllowFilter",True)
+	Gui.frmLotBin.GsGCLotBin.SetGridViewProperty("gvInvMstr","OptionsDetailShowDetailTabs",False)
+	Gui.frmLotBin.GsGCLotBin.SetGridViewProperty("gvInvMstr","OptionsViewShowGroupPanel",False)
+	Gui.frmLotBin.GsGCLotBin.SetGridViewProperty("gvInvMstr","EnableAppearanceOddRow",True)
+	
+	F.ODBC.Connection!con.ExecuteAndReturn("Select Bin,Bin From Bin_Master Order By Bin;",V.Local.sValues)
+	F.Intrinsic.String.Replace(V.Local.sValues,"#$#","",V.Local.sValues)
+	Gui.frmLotBin.GsGCLotBin.ColumnEdit("gvInvMstr","Bin","DropDownList",V.Local.sValues)
+	
+	Gui.frmLotBin.GsGCLotBin.SetColumnProperty("gvInvMstr","Cost","Visible",False)
+	Gui.frmLotBin.GsGCLotBin.SetColumnProperty("gvInvMstr","Matl","Visible",False)
+	Gui.frmLotBin.GsGCLotBin.SetColumnProperty("gvInvMstr","Labor","Visible",False)
+	Gui.frmLotBin.GsGCLotBin.SetColumnProperty("gvInvMstr","Ovhd","Visible",False)
+	Gui.frmLotBin.GsGCLotBin.SetColumnProperty("gvInvMstr","Outs","Visible",False)
+	Gui.frmLotBin.GsGCLotBin.SetColumnProperty("gvInvMstr","Freight","Visible",False)
+	Gui.frmLotBin.GsGCLotBin.SetColumnProperty("gvInvMstr","Oth","Visible",False)
+	
+	Gui.frmLotBin.GsGCLotBin.SetColumnProperty("gvInvMstr","Part","Caption","Part")
+	Gui.frmLotBin.GsGCLotBin.SetColumnProperty("gvInvMstr","Location","Caption","Loc")
+	Gui.frmLotBin.GsGCLotBin.SetColumnProperty("gvInvMstr","Qty_OnHand","Caption","Qty On Hand")
+	Gui.frmLotBin.GsGCLotBin.SetColumnProperty("gvInvMstr","Bin","Caption","Bin")
+	
+	Gui.frmLotBin.GsGCLotBin.SetColumnProperty("gvInvMstr","Part","MinWidth","120")
+	Gui.frmLotBin.GsGCLotBin.SetColumnProperty("gvInvMstr","Location","MinWidth","30")
+	Gui.frmLotBin.GsGCLotBin.SetColumnProperty("gvInvMstr","Qty_OnHand","MinWidth","70")
+	Gui.frmLotBin.GsGCLotBin.SetColumnProperty("gvInvMstr","Bin","MinWidth","70")
+	
+	Gui.frmLotBin.GsGCLotBin.SetColumnProperty("gvInvMstr","Part","AllowEdit",False)
+	Gui.frmLotBin.GsGCLotBin.SetColumnProperty("gvInvMstr","Location","AllowEdit",False)
+	Gui.frmLotBin.GsGCLotBin.SetColumnProperty("gvInvMstr","Qty_OnHand","AllowEdit",False)
+	Gui.frmLotBin.GsGCLotBin.SetColumnProperty("gvInvMstr","Bin","AllowEdit",True)
+	
+	Gui.frmLotBin.GsGCLotBin.SetColumnProperty("gvInvMstr","Bin","ReadOnly",False)
+	
+	Gui.frmLotBin.GsGCLotBin.SetColumnProperty("gvInvMstr","Part","HeaderFontBold",True)
+	Gui.frmLotBin.GsGCLotBin.SetColumnProperty("gvInvMstr","Location","HeaderFontBold",True)
+	Gui.frmLotBin.GsGCLotBin.SetColumnProperty("gvInvMstr","Qty_OnHand","HeaderFontBold",True)
+	Gui.frmLotBin.GsGCLotBin.SetColumnProperty("gvInvMstr","Bin","HeaderFontBold",True)
+
+	Gui.frmLotBin.GsGCLotBin.SetColumnProperty("gvInvMstr","Part","HeaderHAlignment","Center")
+	Gui.frmLotBin.GsGCLotBin.SetColumnProperty("gvInvMstr","Location","HeaderHAlignment","Center")
+	Gui.frmLotBin.GsGCLotBin.SetColumnProperty("gvInvMstr","Qty_OnHand","HeaderHAlignment","Center")
+	Gui.frmLotBin.GsGCLotBin.SetColumnProperty("gvInvMstr","Bin","HeaderHAlignment","Center")
+
+	Gui.frmLotBin.GsGCLotBin.SetColumnProperty("gvInvMstr","Location","CellHAlignment","Center")
+	Gui.frmLotBin.GsGCLotBin.SetColumnProperty("gvInvMstr","Qty_OnHand","CellHAlignment","Center")
+	Gui.frmLotBin.GsGCLotBin.SetColumnProperty("gvInvMstr","Bin","CellHAlignment","Center")
+
+	Gui.frmLotBin.GsGCLotBin.SetColumnProperty("gvInvMstr","Bin","CellBackColor","LightYellow")	
+	
+	Gui.frmLotBin.GsGCLotBin.ResumeLayout()
+	
+	F.ODBC.Connection!con.Close
+Program.Sub.Load_Inventory_Mstr.End
+
+Program.Sub.chkBlank_Click.Start
+	F.Intrinsic.Control.If(V.Screen.frmLotBin!chkBlank.Value,=,1)
+		F.Data.DataTable.SetValue("dtInvMstr",-1,"Bin","")
+	F.Intrinsic.Control.Else
+		F.Data.DataTable.SetValue("dtInvMstr",-1,"Bin",V.Screen.frmLotBin!ddlBin.Text)
+	F.Intrinsic.Control.EndIf
+Program.Sub.chkBlank_Click.End
+
+Program.Sub.ddlBin_Click.Start
+	F.Intrinsic.Control.If(V.Screen.frmLotBin!chkBlank.Value,=,1)
+		F.Data.DataTable.SetValue("dtInvMstr",-1,"Bin","")
+	F.Intrinsic.Control.Else
+		F.Data.DataTable.SetValue("dtInvMstr",-1,"Bin",V.Screen.frmLotBin!ddlBin.Text)
+	F.Intrinsic.Control.EndIf
+Program.Sub.ddlBin_Click.End
+
+Program.Sub.cmdUpdate_Click.Start
+	F.Intrinsic.Control.If(V.DataTable.dtInvMstr.RowCount,<>,0)
+		Gui.frmLotBin.lblStatus.Visible(True)
+		Gui.frmLotBin.pbStatus.Visible(True)
+		Gui.frmLotBin.pbStatus.Min(0)
+		Gui.frmLotBin.pbStatus.Max(V.DataTable.dtInvMstr.RowCount)
+		F.ODBC.Connection!con.OpenCompanyConnection(500)
+		F.Intrinsic.Control.CallSub(Backup_Item_Master)
+		F.Intrinsic.Control.CallSub(Delete_Item_Master)
+		F.Intrinsic.Control.CallSub(Create_Item_Master)
+		F.Intrinsic.Control.CallSub(Update_LotBin_Flag)
+		F.ODBC.Connection!con.Close
+		F.Intrinsic.Control.End
+	F.Intrinsic.Control.EndIf
+Program.Sub.cmdUpdate_Click.End
+
+Program.Sub.Backup_Item_Master.Start
+	V.Local.sCopyFileFrom.Declare
+	V.Local.sCopyFileTo.Declare
+	
+	F.Intrinsic.String.Build("{0}\ITMST{1}",V.Caller.FilesDir,V.Caller.CompanyCode,V.Local.sCopyFileFrom)
+	F.Intrinsic.String.Build("{0}\ITMST{1}_{2}_{3}",V.Caller.FilesDir,V.Caller.CompanyCode,V.Ambient.Date.FormatMMDDYY,V.Ambient.Time.FormatHHNN,V.Local.sCopyFileTo)
+	F.Intrinsic.File.CopyFile(V.Local.sCopyFileFrom,V.Local.sCopyFileTo)
+Program.Sub.Backup_Item_Master.End
+
+Program.Sub.Delete_Item_Master.Start
+	F.ODBC.Connection!con.Execute("Delete From Item_Master Where Part In (Select Part From Inventory_Mstr Where Item_Master.Part = Inventory_Mstr.Part And Item_Master.Location = Inventory_Mstr.Location And Flag_Lot <> 'Y');")
+Program.Sub.Delete_Item_Master.End
+
+Program.Sub.Create_Item_Master.Start
+	V.Local.iCnt.Declare
+	
+	F.Data.DataTable.CreateFromSQL("dtItemMaster","con","Select Top 1 * From Item_Master;",True)
+	F.Data.DataTable.DeleteRow("dtItemMaster")
+	
+	F.Intrinsic.Control.For(V.Local.iCnt,0,V.DataTable.dtInvMstr.RowCount--,1)
+		Gui.frmLotBin.pbStatus.Value(V.Local.iCnt)
+		F.Data.DataTable.AddRow("dtItemMaster","Part",V.DataTable.dtInvMstr(V.Local.iCnt).Part!FieldVal,"Location",V.DataTable.dtInvMstr(V.Local.iCnt).Location!FieldVal,"Bin",V.DataTable.dtInvMstr(V.Local.iCnt).Bin!FieldVal,"Quantity",V.DataTable.dtInvMstr(V.Local.iCnt).Qty_OnHand!FieldVal,"Unit_Cost",V.DataTable.dtInvMstr(V.Local.iCnt).Cost!FieldVal,"UserID","GAB_4608","Terminal_ID",V.Caller.Terminal,"Date_Revision",V.Ambient.Date.FormatYYYYMMDD,"Qty_Available_Ship",V.DataTable.dtInvMstr(V.Local.iCnt).Qty_OnHand!FieldVal,"Matl_Cost",V.DataTable.dtInvMstr(V.Local.iCnt).Matl!FieldVal,"Labor_Cost",V.DataTable.dtInvMstr(V.Local.iCnt).Labor!FieldVal,"Ovhd_Cost",V.DataTable.dtInvMstr(V.Local.iCnt).Ovhd!FieldVal,"Outs_Cost",V.DataTable.dtInvMstr(V.Local.iCnt).Outs!FieldVal,"Frgt_Cost",V.DataTable.dtInvMstr(V.Local.iCnt).Freight!FieldVal,"Oth_Cost",V.DataTable.dtInvMstr(V.Local.iCnt).Oth!FieldVal)
+	F.Intrinsic.Control.Next(V.Local.iCnt)
+	
+	F.Data.DataTable.SaveToDB("dtItemMaster","con","ITEM_MASTER","Part*!*Location*!*Lot*!*Bin*!*Heat*!*Serial_Number")
+Program.Sub.Create_Item_Master.End
+
+Program.Sub.Update_LotBin_Flag.Start
+	F.ODBC.Connection!con.Execute("Update Inventory_Mstr Set Flag_Lot = 'Y' Where Flag_Lot <> 'Y' And Qty_OnHand >= 0;")
+Program.Sub.Update_LotBin_Flag.End
